@@ -20,7 +20,7 @@ import static jackpal.androidterm.emulatorview.compat.KeycodeConstants.*;
 class TermKeyListener {
     private final static String TAG = "TermKeyListener";
     private static final boolean LOG_MISC = false;
-    private static final boolean LOG_KEYS = false;
+    private static final boolean LOG_KEYS = true;
     private static final boolean LOG_COMBINING_ACCENT = false;
 
     /** Disabled for now because it interferes with ALT processing on phones with physical keyboards. */
@@ -36,6 +36,9 @@ class TermKeyListener {
 
     private String[] mKeyCodes = new String[256];
     private String[] mAppKeyCodes = new String[256];
+
+    private long lastKeyDownTime = 0;
+    private int lastKeyCode = -1;
 
     private void initKeyCodes() {
         mKeyMap = new HashMap<Integer, String>();
@@ -271,7 +274,32 @@ class TermKeyListener {
             }
         }
 
+        private String stateString() {
+            switch (mState) {
+            case UNPRESSED:
+                return "UNPRESSED";
+
+            case PRESSED:
+                return "PRESSED";
+
+            case RELEASED:
+                return "RELEASED";
+
+            case USED:
+                return "USED";
+
+            case LOCKED:
+                return "LOCKED";
+            }
+            return "UNKNOWN";
+        }
+
+
         public boolean isActive() {
+            if (LOG_KEYS) {
+                Log.i(TAG, "isActive state: " + stateString());
+            }
+
             return mState != UNPRESSED;
         }
 
@@ -331,6 +359,8 @@ class TermKeyListener {
     }
 
     public void handleHardwareControlKey(boolean down) {
+        Log.i(TAG, "handleHardwareControlKey: " + String.valueOf(down));
+
         mHardwareControlKey = down;
     }
 
@@ -510,9 +540,22 @@ class TermKeyListener {
      */
     public void keyDown(int keyCode, KeyEvent event, boolean appMode,
             boolean allowToggle) throws IOException {
+        long evTime = event.getEventTime();
+
+        long timeDiff = evTime - lastKeyDownTime;
+        lastKeyDownTime = evTime;
+
         if (LOG_KEYS) {
             Log.i(TAG, "keyDown(" + keyCode + "," + event + "," + appMode + "," + allowToggle + ")");
+            Log.i(TAG, "Time Difference: " + timeDiff);
         }
+
+        if (keyCode == lastKeyCode && timeDiff < 150) {
+            Log.i(TAG, "Caught dupe: key: " + keyCode + ", time diff: " + timeDiff);
+            return;
+        }
+        lastKeyCode = keyCode;
+
         if (handleKeyCode(keyCode, event, appMode)) {
             return;
         }
@@ -566,6 +609,7 @@ class TermKeyListener {
             if (!allowToggle && (effectiveMetaState & META_ALT_ON) != 0) {
                 effectiveAlt = true;
             }
+
             if (effectiveAlt) {
                 if (mAltSendsEsc) {
                     mTermSession.write(new byte[]{0x1b},0,1);
@@ -594,6 +638,9 @@ class TermKeyListener {
                 }
             }
             result = event.getUnicodeChar(effectiveMetaState);
+            Log.d(EmulatorDebug.LOG_TAG, "result: " + String.valueOf(result));
+            Log.d(EmulatorDebug.LOG_TAG, "real event: " + String.valueOf((char)event.getUnicodeChar(effectiveMetaState)));
+            Log.d(EmulatorDebug.LOG_TAG, "raw event: " + event.toString());
 
             if ((result & KeyCharacterMap.COMBINING_ACCENT) != 0) {
                 if (LOG_COMBINING_ACCENT) {
@@ -615,8 +662,11 @@ class TermKeyListener {
             }
         }
 
-        boolean effectiveControl = chordedCtrl || mHardwareControlKey || (allowToggle && mControlKey.isActive());
+        //boolean effectiveControl = chordedCtrl || mHardwareControlKey || (allowToggle && mControlKey.isActive());
+        boolean effectiveControl = chordedCtrl;
         boolean effectiveFn = allowToggle && mFnKey.isActive();
+
+        Log.i(TAG, "chordedctrl: " + String.valueOf(chordedCtrl));
 
         result = mapControlChar(effectiveControl, effectiveFn, result);
 
@@ -666,9 +716,9 @@ class TermKeyListener {
             // META_CTRL_ON was added only in API 11, so don't use it,
             // use our own tracking of Ctrl key instead.
             // (event.getMetaState() & META_CTRL_ON) != 0
-            if (mHardwareControlKey || mControlKey.isActive()) {
+            /*if (mHardwareControlKey || mControlKey.isActive()) {
                 keyMod |= KEYMOD_CTRL;
-            }
+                }*/
             if ((event.getMetaState() & META_ALT_ON) != 0) {
                 keyMod |= KEYMOD_ALT;
             }
