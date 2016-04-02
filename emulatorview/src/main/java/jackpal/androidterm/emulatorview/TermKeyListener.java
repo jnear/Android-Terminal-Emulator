@@ -540,17 +540,17 @@ class TermKeyListener {
      */
     public void keyDown(int keyCode, KeyEvent event, boolean appMode,
             boolean allowToggle) throws IOException {
-        long evTime = event.getEventTime();
+        long evTime = event.getDownTime();
 
         long timeDiff = evTime - lastKeyDownTime;
         lastKeyDownTime = evTime;
 
         if (LOG_KEYS) {
             Log.i(TAG, "keyDown(" + keyCode + "," + event + "," + appMode + "," + allowToggle + ")");
-            Log.i(TAG, "Time Difference: " + timeDiff);
+            Log.i(TAG, "Key: " +  String.valueOf((char)event.getUnicodeChar()) + ", Time Difference: " + timeDiff);
         }
 
-        if (keyCode == lastKeyCode && timeDiff < 150) {
+        if (keyCode == lastKeyCode && timeDiff < 100) {
             Log.i(TAG, "Caught dupe: key: " + keyCode + ", time diff: " + timeDiff);
             return;
         }
