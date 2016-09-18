@@ -18,6 +18,7 @@ package jackpal.androidterm;
 
 import android.content.Context;
 import android.util.DisplayMetrics;
+import android.view.KeyEvent;
 
 import jackpal.androidterm.emulatorview.ColorScheme;
 import jackpal.androidterm.emulatorview.EmulatorView;

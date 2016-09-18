@@ -26,11 +26,13 @@ import java.util.Arrays;
 import java.util.Hashtable;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.text.style.URLSpan;
@@ -1101,7 +1103,7 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
             x > 255-32 || y > 255-32;
         //Log.d(TAG, "mouse button "+x+","+y+","+button_code+",oob="+out_of_bounds);
         if(button_code < 0 || button_code > 255-32) {
-            Log.e(TAG, "mouse button_code out of range: "+button_code);
+            Log.e(TAG, "mouse button_code out of range: " + button_code);
             return;
         }
         if(!out_of_bounds) {
@@ -1289,6 +1291,27 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
                 // Don't intercept the system keys
                 return super.onKeyDown(keyCode, event);
             }
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        SharedPreferences.Editor editor = prefs.edit();
+
+        // TEXT SIZE HOTKEYS
+        if (event.getKeyCode() == KeyEvent.KEYCODE_1 &&
+                KeyEvent.metaStateHasModifiers(event.getMetaState(), KeyEvent.META_ALT_ON)) {
+
+            mTextSize = mTextSize - 1;
+            editor.putString("fontsize", Integer.toString((int)(mTextSize / mDensity)));
+            editor.commit();
+            updateText();
+        }
+
+        if (event.getKeyCode() == KeyEvent.KEYCODE_2 &&
+                KeyEvent.metaStateHasModifiers(event.getMetaState(), KeyEvent.META_ALT_ON)) {
+            mTextSize = mTextSize + 1;
+            editor.putString("fontsize", Integer.toString((int)(mTextSize / mDensity)));
+            editor.commit();
+            updateText();
         }
 
         // Translate the keyCode into an ASCII character.
